@@ -1,0 +1,88 @@
+import { Component, OnInit } from '@angular/core';
+import {DataService} from '../../services/data.service';
+import {ActivatedRoute} from '@angular/router';
+import {Comentario, New} from '../../interfaces/interfaces';
+import {AlertController} from '@ionic/angular';
+
+@Component({
+  selector: 'app-mostrar-noticia',
+  templateUrl: './mostrar-noticia.page.html',
+  styleUrls: ['./mostrar-noticia.page.scss'],
+})
+export class MostrarNoticiaPage implements OnInit {
+  id: string;
+  titulo = '';
+  news: New = {
+    _id: '',
+  imagen: '',
+  titulo: '',
+  subtitulo: '',
+  autor: '',
+  fecha: new Date(),
+  contenido: '',
+  categoria: '',
+  noticias: []
+  };
+  comentarios: Comentario[];
+  constructor(private dataService: DataService, private activatedRoute: ActivatedRoute, private alertController: AlertController) { }
+  ngOnInit() { // Al iniciar, guardo el id que le pase al seleccionar la noticia mas el titulo
+    this.id = this.activatedRoute.snapshot.paramMap.get('id');
+    this.dataService.getNew(this.id).subscribe(r => { // En base al id, saco su correspondiente noticia
+      this.news = r;
+    });
+
+    this.titulo = this.activatedRoute.snapshot.paramMap.get('titulo');
+    this.dataService.getComments(this.id).subscribe(r => {
+      this.comentarios = r;
+    });
+  }
+  async crearComentario() { // Alert para crear el comentario (se abre al pulsar el boton de añadir)
+    const alert = await this.alertController.create({
+      header: 'Insertar un comentario',
+      backdropDismiss: false,
+      inputs: [
+          {
+        name: 'nombre',
+        type: 'text',
+        placeholder: 'Nombre',
+          },
+          {
+          name: 'email',
+          type: 'text',
+          placeholder: 'Email',
+          },
+          {
+          name: 'comentario',
+          type: 'text',
+          placeholder: 'Escribe tu comentario...',
+          }],
+      buttons: [
+        {
+          text: 'Cancel',
+          role: 'cancel',
+          cssClass: 'secondary',
+        }, {
+          text: 'Aceptar',
+          role: 'confirm',
+          handler: (data) => {
+            const comment: Comentario = { // Creo un nuevo comentario con los datos mas el id_noticia
+              nombre: data.nombre,
+              correo: data.email,
+              comentario : data.comentario,
+              id_noticia : this.id
+            };
+            this.subirComentario(comment); // Llamo a una función encargada de guardar las noticias
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  subirComentario(comment: Comentario) {
+    this.dataService.putComments(comment).subscribe(res =>
+    console.log(res)
+    );
+    this.comentarios.push(comment); // Hago un push del comentario para que se muestre directamente
+  }
+}
